@@ -11,19 +11,24 @@ from sklearn.neighbors import NearestNeighbors
 from numpy.linalg import norm
 import gdown
 
-# Download embeddings.pkl from Google Drive if not already present
+# Google Drive download setup
 file_id = '1I2XNLFm6fK8n5OU9EFTCTW5OHNgNVqlE'
 gdrive_url = f'https://drive.google.com/uc?id={file_id}'
 
+# Download embeddings.pkl from Drive if not present
 if not os.path.exists('embeddings.pkl'):
     st.text("Downloading embeddings.pkl from Google Drive...")
     gdown.download(gdrive_url, 'embeddings.pkl', quiet=False)
 
-# Load precomputed embeddings and filenames
+# Load embeddings and filenames
 feature_list = np.array(pickle.load(open('embeddings.pkl', 'rb')))
 filenames = pickle.load(open('filenames.pkl', 'rb'))
 
-# Load model
+# Fix Windows paths if needed
+def fix_path(path):
+    return path.replace('\\', '/')
+
+# Load pretrained model
 model = ResNet50(weights='imagenet', include_top=False, input_shape=(224, 224, 3))
 model.trainable = False
 model = tensorflow.keras.Sequential([
@@ -31,7 +36,7 @@ model = tensorflow.keras.Sequential([
     GlobalMaxPooling2D()
 ])
 
-# Streamlit UI
+# Streamlit app UI
 st.title('Fashion Recommender System')
 
 def save_uploaded_file(uploaded_file):
@@ -57,6 +62,7 @@ def recommend(features, feature_list):
     distances, indices = neighbors.kneighbors([features])
     return indices
 
+# File uploader and results
 uploaded_file = st.file_uploader("Choose an image")
 if uploaded_file is not None:
     if save_uploaded_file(uploaded_file):
@@ -64,16 +70,17 @@ if uploaded_file is not None:
         st.image(display_image)
         features = feature_extraction(os.path.join("uploads", uploaded_file.name), model)
         indices = recommend(features, feature_list)
+
         col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
-            st.image(filenames[indices[0][0]])
+            st.image(fix_path(filenames[indices[0][0]]))
         with col2:
-            st.image(filenames[indices[0][1]])
+            st.image(fix_path(filenames[indices[0][1]]))
         with col3:
-            st.image(filenames[indices[0][2]])
+            st.image(fix_path(filenames[indices[0][2]]))
         with col4:
-            st.image(filenames[indices[0][3]])
+            st.image(fix_path(filenames[indices[0][3]]))
         with col5:
-            st.image(filenames[indices[0][4]])
+            st.image(fix_path(filenames[indices[0][4]]))
     else:
         st.header("Some error occurred during file upload")
